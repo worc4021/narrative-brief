@@ -1,0 +1,11 @@
+{
+  "name": "narrative-brief",
+  "owner": { "name": "Manuel Schaich" },
+  "plugins": [
+    {
+      "name": "narrative-brief",
+      "source": "./",
+      "description": "Narrated visual briefings for reviewing agent work from a phone."
+    }
+  ]
+}

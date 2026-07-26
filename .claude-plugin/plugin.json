@@ -1,0 +1,6 @@
+{
+  "name": "narrative-brief",
+  "version": "0.1.0",
+  "description": "Narrated visual briefings - slides plus voiceover, published as an Artifact for phone review. Use when the user asks to be shown rather than told, or when an agent is blocked on a decision.",
+  "skills": ["./skills/brief"]
+}

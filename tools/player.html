@@ -1,0 +1,225 @@
+<title>__TITLE__</title>
+<style>
+  :root{
+    --ground:#EDF0F2; --surface:#FFFFFF; --ink:#12191F; --muted:#5C6B73;
+    --line:#D3DADE; --accent:#0E7C8A; --signal:#E0703A;
+    --shadow:0 1px 2px rgba(18,25,31,.06),0 8px 24px rgba(18,25,31,.07);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --ground:#0D1418; --surface:#141E24; --ink:#E6EDF1; --muted:#8FA3AD;
+           --line:#22323A; --accent:#3FB3C2; --signal:#F08A54;
+           --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.34); }
+  }
+  :root[data-theme="dark"]{ --ground:#0D1418; --surface:#141E24; --ink:#E6EDF1;
+    --muted:#8FA3AD; --line:#22323A; --accent:#3FB3C2; --signal:#F08A54;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.34); }
+  :root[data-theme="light"]{ --ground:#EDF0F2; --surface:#FFFFFF; --ink:#12191F;
+    --muted:#5C6B73; --line:#D3DADE; --accent:#0E7C8A; --signal:#E0703A;
+    --shadow:0 1px 2px rgba(18,25,31,.06),0 8px 24px rgba(18,25,31,.07); }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+       -webkit-text-size-adjust:100%}
+  .app{min-height:100dvh;display:flex;flex-direction:column}
+
+  .bar{display:flex;align-items:center;gap:12px;padding:14px 18px;
+       border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12px;
+       letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .bar .name{color:var(--ink);font-weight:600;letter-spacing:.04em}
+  .bar .spacer{flex:1}
+  .ghost{appearance:none;background:none;border:1px solid var(--line);color:var(--muted);
+         font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+         padding:6px 10px;border-radius:6px;cursor:pointer}
+  .ghost:hover{color:var(--ink);border-color:var(--muted)}
+  .ghost[aria-pressed="true"]{color:var(--surface);background:var(--accent);border-color:var(--accent)}
+  :focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+  .stage{flex:1;display:grid;place-items:start center;padding:22px 18px}
+  .deck{width:100%;max-width:640px}
+  .summary{color:var(--muted);font-size:15px;line-height:1.6;margin:0 0 16px}
+
+  .slide{display:none;background:var(--surface);border:1px solid var(--line);
+         border-radius:14px;padding:26px 22px;box-shadow:var(--shadow)}
+  .slide.is-current{display:block;animation:in .34s ease}
+  @keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.slide.is-current{animation:none}}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--accent);
+           margin:0 0 10px;font-variant-numeric:tabular-nums}
+  .slide h2{margin:0 0 18px;font-size:23px;line-height:1.25;text-wrap:balance;letter-spacing:-.01em}
+  .visual{overflow-x:auto}
+  .visual p{font-size:17px;line-height:1.55;margin:0 0 10px}
+  .visual ul{margin:0;padding-left:20px;font-size:17px;line-height:1.6}
+  .visual code{font-family:var(--mono);font-size:.9em;background:var(--ground);
+               padding:1px 5px;border-radius:4px}
+  .visual .missing{font-family:var(--mono);font-size:13px;color:var(--signal);
+                   border:1px dashed var(--line);border-radius:8px;padding:22px;
+                   text-align:center;margin:0}
+  .transcript{display:none;margin:18px 0 0;padding-top:16px;border-top:1px solid var(--line);
+              color:var(--muted);font-size:15px;line-height:1.6}
+  /* Two independent reasons to show a transcript, both additive: the server sets
+     show-transcript on a slide it could not narrate, the reader toggles the
+     body-level class. Neither may switch the other off. */
+  .slide.show-transcript .transcript{display:block}
+  body.transcripts .transcript{display:block}
+
+  /* Any authored chart, not just one carrying class="chart" — an inline <svg> with
+     only a viewBox falls back to 300x150 in some engines without this. */
+  .visual svg{width:100%;height:auto;display:block}
+  .plate{display:block;width:100%;padding:10px;border:1px solid var(--line);
+         border-radius:10px;background:#FFFFFF;cursor:zoom-in}
+  .plate img{width:100%;height:auto;display:block;border-radius:4px}
+  pre.mermaid{background:none;margin:0;overflow-x:auto}
+
+  /* Read mode: same DOM, different layout. No slide is ever duplicated. */
+  body.reading .slide{display:block;margin-bottom:14px;animation:none}
+  body.reading .transcript{display:block}
+  body.reading .transport{display:none}
+
+  .transport{position:sticky;bottom:0;background:var(--ground);
+             border-top:1px solid var(--line);
+             padding:12px 18px calc(12px + env(safe-area-inset-bottom))}
+  .segs{display:flex;gap:5px;margin-bottom:12px}
+  .seg{flex:1;appearance:none;background:var(--line);border:0;height:4px;border-radius:2px;
+       padding:0;cursor:pointer;overflow:hidden}
+  .seg span{display:block;height:100%;width:0;background:var(--accent);border-radius:2px}
+  .seg.done span{width:100%}
+  .keys{display:flex;align-items:center;gap:10px}
+  .keys .time{font-family:var(--mono);font-size:12px;color:var(--muted);
+              font-variant-numeric:tabular-nums;margin-left:auto}
+  .key{appearance:none;background:var(--surface);border:1px solid var(--line);color:var(--ink);
+       width:44px;height:44px;border-radius:22px;cursor:pointer;display:grid;place-items:center}
+  .key.main{background:var(--accent);border-color:var(--accent);color:#fff;width:52px;height:52px;
+            border-radius:26px}
+  .key svg{width:18px;height:18px;fill:currentColor}
+
+  dialog.zoom{border:0;padding:0;background:#fff;max-width:96vw;max-height:92vh;border-radius:10px}
+  dialog.zoom::backdrop{background:rgba(0,0,0,.82)}
+  dialog.zoom img{max-width:96vw;max-height:92vh;display:block}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <span class="name">__TITLE__</span>
+    <span class="spacer"></span>
+    <button class="ghost" id="tx" type="button" aria-pressed="false">Transcript</button>
+    <button class="ghost" id="rd" type="button" aria-pressed="false">Read</button>
+  </header>
+
+  <main class="stage">
+    <div class="deck">
+      <p class="summary">__SUMMARY__</p>
+      __SLIDES__
+    </div>
+  </main>
+
+  __TRANSPORT__
+</div>
+
+<dialog class="zoom" id="zoom"><img alt="Enlarged figure" /></dialog>
+__AUDIO__
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  /* Sparse, keyed by SLIDE index: only narrated slides emit an audio element,
+     so DOM order is not slide order once any narration fails. forEach skips the
+     holes, so every listener below still binds to its true slide index. */
+  var auds=[]; [].slice.call(document.querySelectorAll('audio[data-i]'))
+    .forEach(function(a){ auds[+a.dataset.i]=a; });
+  var segs=[].slice.call(document.querySelectorAll('.seg'));
+  var playBtn=document.getElementById('play');
+  var pic=document.getElementById('pic'), timeEl=document.getElementById('time');
+  var PLAY='M7 4v16l13-8z', PAUSE='M6 4h4v16H6zM14 4h4v16h-4z';
+  var N=slides.length, i=0, playing=false;
+
+  function fmt(s){ if(!isFinite(s))return '—:—';
+    var m=Math.floor(s/60),r=Math.floor(s%60); return m+':'+(r<10?'0':'')+r; }
+
+  function paint(){ if(pic) pic.setAttribute('d', playing?PAUSE:PLAY); }
+  function stop(){ playing=false; paint(); }
+
+  function show(n){
+    if(n<0||n>=N) return;
+    if(auds[i]){ auds[i].pause(); auds[i].currentTime=0; }
+    slides[i].classList.remove('is-current');
+    i=n; slides[i].classList.add('is-current');
+    segs.forEach(function(s,k){ s.classList.toggle('done',k<i);
+      s.firstElementChild.style.width = k<i?'100%':'0'; });
+    /* A slide with no narration ends playback rather than stalling with a PAUSE
+       icon over silence: one tap resumes, and the icon tells the truth meanwhile. */
+    if(playing){ if(auds[i]) auds[i].play().catch(stop); else stop(); }
+    paint();
+    if(auds[i]&&timeEl) timeEl.textContent=fmt(auds[i].duration);
+  }
+
+  auds.forEach(function(a,k){
+    a.addEventListener('timeupdate',function(){
+      if(k!==i||!a.duration) return;
+      segs[k].firstElementChild.style.width=(a.currentTime/a.duration*100)+'%';
+      timeEl.textContent=fmt(a.duration-a.currentTime);
+    });
+    a.addEventListener('ended',function(){
+      if(k!==i) return;
+      segs[k].classList.add('done');
+      if(i<N-1) show(i+1); else stop();
+    });
+    a.addEventListener('loadedmetadata',function(){
+      if(k===i&&timeEl) timeEl.textContent=fmt(a.duration); });
+  });
+
+  if(playBtn) playBtn.addEventListener('click',function(){
+    playing=!playing;
+    if(!playing){ if(auds[i]) auds[i].pause(); paint(); return; }
+    if(!auds[i]){                               /* silent slide: step on */
+      if(i<N-1) show(i+1); else stop();
+      return;
+    }
+    auds[i].play().then(paint)
+                  .catch(function(){ stop(); document.getElementById('rd').click(); });
+  });
+
+  var prev=document.getElementById('prev'), next=document.getElementById('next');
+  if(prev) prev.addEventListener('click',function(){ show(i-1); });
+  if(next) next.addEventListener('click',function(){ show(i+1); });
+  segs.forEach(function(s){ s.addEventListener('click',function(){ show(+s.dataset.i); }); });
+
+  document.getElementById('tx').addEventListener('click',function(){
+    var on=this.getAttribute('aria-pressed')==='true';
+    this.setAttribute('aria-pressed',String(!on));
+    /* Body-level and additive. Toggling this off must never strip the
+       server-set show-transcript from a slide that could not be narrated. */
+    document.body.classList.toggle('transcripts',!on);
+  });
+  document.getElementById('rd').addEventListener('click',function(){
+    var on=this.getAttribute('aria-pressed')==='true';
+    this.setAttribute('aria-pressed',String(!on));
+    document.body.classList.toggle('reading',!on);
+    if(!on){ if(auds[i]) auds[i].pause(); stop(); }
+  });
+
+  var zoom=document.getElementById('zoom');
+  document.addEventListener('click',function(e){
+    var p=e.target.closest('.plate'); if(!p) return;
+    zoom.querySelector('img').src=p.querySelector('img').src; zoom.showModal();
+  });
+  zoom.addEventListener('click',function(){ zoom.close(); });
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight') show(i+1);
+    if(e.key==='ArrowLeft') show(i-1);
+    if(e.key===' '&&playBtn){ e.preventDefault(); playBtn.click(); }
+  });
+
+  show(0);
+
+  /* Nothing to play means no transport bar, and a phone has no arrow keys — so
+     without this the reader is stranded on slide 1. Read mode makes the whole
+     deck scrollable, which is the only navigation left. */
+  if(!auds.length){
+    document.body.classList.add('reading');
+    document.getElementById('rd').setAttribute('aria-pressed','true');
+  }
+})();
+</script>
